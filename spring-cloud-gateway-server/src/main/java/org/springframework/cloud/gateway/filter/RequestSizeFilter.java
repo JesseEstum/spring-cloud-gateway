@@ -20,6 +20,7 @@ import reactor.core.publisher.Mono;
 
 import org.springframework.cloud.gateway.filter.factory.GatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.RequestSizeGatewayFilterFactory;
+import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.util.ObjectUtils;
@@ -27,7 +28,7 @@ import org.springframework.web.server.ServerWebExchange;
 
 import static org.springframework.cloud.gateway.support.GatewayToStringStyler.filterToStringCreator;
 
-public class RequestSizeFilter implements GatewayFilter {
+public class RequestSizeFilter implements GatewayFilter, Ordered {
 
 	private static String PREFIX = "kMGTPE";
 
@@ -80,6 +81,13 @@ public class RequestSizeFilter implements GatewayFilter {
 		int exp = (int) (Math.log(bytes) / Math.log(unit));
 		String pre = Character.toString(PREFIX.charAt(exp - 1));
 		return String.format("%.1f %sB", bytes / Math.pow(unit, exp), pre);
+	}
+
+	@Override
+	public int getOrder() {
+		// TODO this needs to ideally reference off of ResponseCacheGatewayFilter instead
+		// of being hardcoded
+		return NettyWriteResponseFilter.WRITE_RESPONSE_FILTER_ORDER - 5;
 	}
 
 }
