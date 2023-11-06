@@ -24,6 +24,7 @@ import reactor.core.publisher.Mono;
 import org.springframework.cloud.gateway.filter.factory.CacheRequestBodyGatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.GatewayFilterFactory;
 import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
+import org.springframework.core.Ordered;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.codec.HttpMessageReader;
@@ -35,7 +36,7 @@ import org.springframework.web.server.ServerWebExchange;
 import static org.springframework.cloud.gateway.support.GatewayToStringStyler.filterToStringCreator;
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.CACHED_SERVER_HTTP_REQUEST_DECORATOR_ATTR;
 
-public class CacheRequestBodyFilter implements GatewayFilter {
+public class CacheRequestBodyFilter implements GatewayFilter, Ordered {
 
 	private final CacheRequestBodyGatewayFilterFactory.Config config;
 
@@ -98,6 +99,13 @@ public class CacheRequestBodyFilter implements GatewayFilter {
 	public String toString() {
 		return filterToStringCreator(gatewayFilterFactoryInstance).append("Body class", config.getBodyClass())
 				.toString();
+	}
+
+	@Override
+	public int getOrder() {
+		// TODO this needs to ideally reference off of ResponseCacheGatewayFilter instead
+		// of being hardcoded
+		return NettyWriteResponseFilter.WRITE_RESPONSE_FILTER_ORDER - 4;
 	}
 
 }
