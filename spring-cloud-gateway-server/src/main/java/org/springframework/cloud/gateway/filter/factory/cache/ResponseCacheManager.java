@@ -74,7 +74,8 @@ public class ResponseCacheManager {
 	private static final List<HttpStatusCode> statusesToCache = Arrays.asList(HttpStatus.OK, HttpStatus.PARTIAL_CONTENT,
 			HttpStatus.MOVED_PERMANENTLY);
 
-	public Optional<CachedResponse> getFromCache(ServerHttpRequest request, String metadataKey) {
+	public Optional<CachedResponse> getFromCache(ServerWebExchange exchange, String metadataKey) {
+		ServerHttpRequest request = exchange.getRequest();
 		CachedResponseMetadata metadata = retrieveMetadata(metadataKey);
 		String key = cacheKeyGenerator.generateKey(request,
 				metadata != null ? metadata.varyOnHeaders() : Collections.emptyList());
@@ -106,7 +107,7 @@ public class ResponseCacheManager {
 		});
 	}
 
-	private Optional<CachedResponse> getFromCache(String key) {
+	protected Optional<CachedResponse> getFromCache(String key) {
 		CachedResponse cachedResponse;
 		try {
 			cachedResponse = cache.get(key, CachedResponse.class);
