@@ -38,7 +38,7 @@ import org.springframework.cloud.gateway.filter.factory.FallbackHeadersGatewayFi
 import org.springframework.cloud.gateway.filter.factory.JsonToGrpcGatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.SpringCloudCircuitBreakerResilience4JFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.TokenRelayGatewayFilterFactory;
-import org.springframework.cloud.gateway.filter.factory.cache.ResponseCacheGatewayFilterFactory;
+import org.springframework.cloud.gateway.filter.factory.cache.LocalResponseCacheGatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
 import org.springframework.cloud.gateway.support.Configurable;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
@@ -75,9 +75,18 @@ class ConfigurableHintsRegistrationProcessor implements BeanFactoryInitializatio
 					"org.springframework.web.reactive.DispatcherHandler"),
 			SpringCloudCircuitBreakerResilience4JFilterFactory.class, circuitBreakerConditionalClasses,
 			FallbackHeadersGatewayFilterFactory.class, circuitBreakerConditionalClasses,
-			ResponseCacheGatewayFilterFactory.class,
+			LocalResponseCacheGatewayFilterFactory.class,
 			Set.of("com.github.benmanes.caffeine.cache.Weigher", "com.github.benmanes.caffeine.cache.Caffeine",
-					"org.springframework.cache.caffeine.CaffeineCacheManager"));
+					"org.springframework.cache.caffeine.CaffeineCacheManager")); // TODO
+																					// need
+																					// to
+																					// add
+																					// hints
+																					// here
+																					// for
+																					// the
+																					// Redis
+																					// edition
 
 	@Override
 	public BeanFactoryInitializationAotContribution processAheadOfTime(ConfigurableListableBeanFactory beanFactory) {

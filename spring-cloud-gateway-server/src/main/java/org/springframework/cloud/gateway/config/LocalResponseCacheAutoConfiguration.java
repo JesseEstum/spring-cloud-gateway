@@ -18,8 +18,6 @@ package org.springframework.cloud.gateway.config;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Weigher;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.AllNestedConditions;
@@ -32,8 +30,8 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.cloud.gateway.config.conditional.ConditionalOnEnabledFilter;
 import org.springframework.cloud.gateway.filter.factory.cache.GlobalLocalResponseCacheGatewayFilter;
+import org.springframework.cloud.gateway.filter.factory.cache.LocalResponseCacheGatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.cache.LocalResponseCacheProperties;
-import org.springframework.cloud.gateway.filter.factory.cache.ResponseCacheGatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.cache.ResponseCacheManagerFactory;
 import org.springframework.cloud.gateway.filter.factory.cache.keygenerator.CacheKeyGenerator;
 import org.springframework.cloud.gateway.filter.factory.cache.provider.CaffieneCacheManagerProvider;
@@ -48,10 +46,8 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({ LocalResponseCacheProperties.class })
 @ConditionalOnClass({ Weigher.class, Caffeine.class, CaffeineCacheManager.class })
-@ConditionalOnEnabledFilter(ResponseCacheGatewayFilterFactory.class)
+@ConditionalOnEnabledFilter(LocalResponseCacheGatewayFilterFactory.class)
 public class LocalResponseCacheAutoConfiguration {
-
-	private static final Log LOGGER = LogFactory.getLog(LocalResponseCacheAutoConfiguration.class);
 
 	private static final String RESPONSE_CACHE_NAME = "response-cache";
 
@@ -68,22 +64,24 @@ public class LocalResponseCacheAutoConfiguration {
 	}
 
 	@Bean(name = RESPONSE_CACHE_MANAGER_NAME)
-	public CacheManager gatewayCacheManager(CaffieneCacheManagerProvider caffieneCacheManagerProvider,
-			LocalResponseCacheProperties cacheProperties) {
-		return caffieneCacheManagerProvider.getCacheManager(cacheProperties);
+	@Conditional(LocalResponseCacheAutoConfiguration.OnGlobalLocalResponseCacheCondition.class)
+	public CacheManager gatewayCacheManager(LocalResponseCacheProperties cacheProperties) {
+		return createGatewayCacheManager(cacheProperties);
+	}
+
+	@Bean
+	public LocalResponseCacheGatewayFilterFactory localResponseCacheGatewayFilterFactory(
+			ResponseCacheManagerFactory responseCacheManagerFactory, LocalResponseCacheProperties properties,
+			CaffieneCacheManagerProvider caffieneCacheManagerProvider) {
+		// TODO pull out the caffieneCacheManagerProvider to see if that can be post
+		// constructed
+		return new LocalResponseCacheGatewayFilterFactory(responseCacheManagerFactory, properties.getTimeToLive(),
+				properties.getSize(), caffieneCacheManagerProvider);
 	}
 
 	@Bean
 	public CaffieneCacheManagerProvider cacheManagerProvider() {
 		return new CaffieneCacheManagerProvider();
-	}
-
-	@Bean
-	public ResponseCacheGatewayFilterFactory localResponseCacheGatewayFilterFactory(
-			ResponseCacheManagerFactory responseCacheManagerFactory, LocalResponseCacheProperties properties,
-			CaffieneCacheManagerProvider caffieneCacheManagerProvider) {
-		return new ResponseCacheGatewayFilterFactory(responseCacheManagerFactory, properties.getTimeToLive(),
-				properties.getSize(), caffieneCacheManagerProvider);
 	}
 
 	@Bean
@@ -98,6 +96,12 @@ public class LocalResponseCacheAutoConfiguration {
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static CaffeineCacheManager createGatewayCacheManager(LocalResponseCacheProperties cacheProperties) {
+		CaffieneCacheManagerProvider caffieneCacheManagerProvider = new CaffieneCacheManagerProvider();
+
+		return (CaffeineCacheManager) caffieneCacheManagerProvider.getCacheManager(cacheProperties);
+	}
+
 	Cache responseCache(CacheManager cacheManager) {
 		return cacheManager.getCache(RESPONSE_CACHE_NAME);
 	}

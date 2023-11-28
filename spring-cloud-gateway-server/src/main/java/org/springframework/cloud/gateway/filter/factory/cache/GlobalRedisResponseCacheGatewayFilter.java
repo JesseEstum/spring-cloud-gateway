@@ -27,9 +27,9 @@ import org.springframework.cache.Cache;
  * @author Ignacio Lozano
  * @author Marta Medio
  */
-public class GlobalLocalResponseCacheGatewayFilter extends GlobalAbstractResponseCacheGatewayFilter {
+public class GlobalRedisResponseCacheGatewayFilter extends GlobalAbstractResponseCacheGatewayFilter {
 
-	public GlobalLocalResponseCacheGatewayFilter(ResponseCacheManagerFactory cacheManagerFactory, Cache globalCache,
+	public GlobalRedisResponseCacheGatewayFilter(ResponseCacheManagerFactory cacheManagerFactory, Cache globalCache,
 			Duration configuredTimeToLive) {
 		super(cacheManagerFactory, globalCache, configuredTimeToLive);
 	}

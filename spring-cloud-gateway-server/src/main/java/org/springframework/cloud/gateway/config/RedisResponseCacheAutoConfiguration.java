@@ -24,9 +24,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cloud.gateway.config.conditional.ConditionalOnEnabledFilter;
-import org.springframework.cloud.gateway.filter.factory.cache.GlobalLocalResponseCacheGatewayFilter;
+import org.springframework.cloud.gateway.filter.factory.cache.GlobalRedisResponseCacheGatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.cache.LocalResponseCacheProperties;
-import org.springframework.cloud.gateway.filter.factory.cache.ResponseCacheGatewayFilterFactory;
+import org.springframework.cloud.gateway.filter.factory.cache.RedisResponseCacheGatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.cache.ResponseCacheManagerFactory;
 import org.springframework.cloud.gateway.filter.factory.cache.keygenerator.CacheKeyGenerator;
 import org.springframework.cloud.gateway.filter.factory.cache.provider.RedisCacheManagerProvider;
@@ -36,50 +36,49 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCache;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 
-/**
- * @author Ignacio Lozano
- * @author Marta Medio
- */
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties({ LocalResponseCacheProperties.class })
+@EnableConfigurationProperties({ LocalResponseCacheProperties.class }) // TODO need to
+																		// refactor this
+																		// into local
+																		// response cache
+																		// properties vs
+																		// redis ones
 @ConditionalOnClass({ RedisCache.class, RedisConnectionFactory.class })
-@ConditionalOnEnabledFilter(ResponseCacheGatewayFilterFactory.class)
-@ConditionalOnProperty(value = "spring.cloud.gateway.filter.local-response-cache.cache-implementation",
-		havingValue = "redis")
+@ConditionalOnEnabledFilter(RedisResponseCacheGatewayFilterFactory.class)
 public class RedisResponseCacheAutoConfiguration {
 
 	private static final String RESPONSE_CACHE_NAME = "response-cache";
 
 	@Bean
-	@Conditional(RedisResponseCacheAutoConfiguration.OnGlobalLocalResponseCacheCondition.class)
-	public GlobalLocalResponseCacheGatewayFilter globalLocalResponseCacheGatewayFilter(
+	@Conditional(OnGlobalRedisResponseCacheCondition.class)
+	public GlobalRedisResponseCacheGatewayFilter globalRedisResponseCacheGatewayFilter(
 			ResponseCacheManagerFactory responseCacheManagerFactory, LocalResponseCacheProperties properties,
 			RedisCacheManagerProvider redisCacheManagerProvider) {
-		return new GlobalLocalResponseCacheGatewayFilter(responseCacheManagerFactory,
+		return new GlobalRedisResponseCacheGatewayFilter(responseCacheManagerFactory,
 				responseCache(redisCacheManagerProvider.getCacheManager(properties)), properties.getTimeToLive());
 	}
 
 	@Bean
-	public RedisCacheManagerProvider cacheManagerProvider(RedisConnectionFactory redisConnectionFactory) {
+	public RedisCacheManagerProvider redisCacheManagerProvider(RedisConnectionFactory redisConnectionFactory) {
 		return new RedisCacheManagerProvider(redisConnectionFactory);
 	}
 
 	@Bean
-	public ResponseCacheGatewayFilterFactory localResponseCacheGatewayFilterFactory(
+	public RedisResponseCacheGatewayFilterFactory redisResponseCacheGatewayFilterFactory(
 			ResponseCacheManagerFactory responseCacheManagerFactory, LocalResponseCacheProperties properties,
 			RedisCacheManagerProvider redisCacheManagerProvider) {
-		return new ResponseCacheGatewayFilterFactory(responseCacheManagerFactory, properties.getTimeToLive(),
+		return new RedisResponseCacheGatewayFilterFactory(responseCacheManagerFactory, properties.getTimeToLive(),
 				properties.getSize(), redisCacheManagerProvider);
 	}
 
 	@Bean
 	@ConditionalOnMissingBean
-	public ResponseCacheManagerFactory responseCacheManagerFactory(CacheKeyGenerator cacheKeyGenerator) {
-		return new ResponseCacheManagerFactory(cacheKeyGenerator);
+	public ResponseCacheManagerFactory responseCacheManagerFactory(CacheKeyGenerator redisResponseCacheKeyGenerator) {
+		return new ResponseCacheManagerFactory(redisResponseCacheKeyGenerator);
 	}
 
 	@Bean
-	public CacheKeyGenerator cacheKeyGenerator() {
+	public CacheKeyGenerator redisResponseCacheKeyGenerator() {
 		return new CacheKeyGenerator();
 	}
 
@@ -89,9 +88,9 @@ public class RedisResponseCacheAutoConfiguration {
 		return cacheManager.getCache(RESPONSE_CACHE_NAME);
 	}
 
-	public static class OnGlobalLocalResponseCacheCondition extends AllNestedConditions {
+	public static class OnGlobalRedisResponseCacheCondition extends AllNestedConditions {
 
-		OnGlobalLocalResponseCacheCondition() {
+		OnGlobalRedisResponseCacheCondition() {
 			super(ConfigurationPhase.REGISTER_BEAN);
 		}
 
@@ -100,14 +99,14 @@ public class RedisResponseCacheAutoConfiguration {
 
 		}
 
-		@ConditionalOnProperty(value = "spring.cloud.gateway.filter.local-response-cache.enabled", havingValue = "true")
-		static class OnLocalResponseCachePropertyEnabled {
+		@ConditionalOnProperty(value = "spring.cloud.gateway.filter.redis-response-cache.enabled", havingValue = "true")
+		static class OnRedisResponseCachePropertyEnabled {
 
 		}
 
-		@ConditionalOnProperty(name = "spring.cloud.gateway.global-filter.local-response-cache.enabled",
+		@ConditionalOnProperty(name = "spring.cloud.gateway.global-filter.redis-response-cache.enabled",
 				havingValue = "true", matchIfMissing = true)
-		static class OnGlobalLocalResponseCachePropertyEnabled {
+		static class OnGlobalRedisResponseCachePropertyEnabled {
 
 		}
 

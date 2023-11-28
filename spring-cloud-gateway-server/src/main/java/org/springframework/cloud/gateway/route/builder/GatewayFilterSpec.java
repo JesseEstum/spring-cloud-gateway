@@ -31,6 +31,7 @@ import java.util.stream.Stream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.cloud.gateway.filter.factory.cache.RedisResponseCacheGatewayFilterFactory;
 import reactor.retry.Repeat;
 import reactor.retry.Retry;
 
@@ -75,7 +76,7 @@ import org.springframework.cloud.gateway.filter.factory.SetStatusGatewayFilterFa
 import org.springframework.cloud.gateway.filter.factory.SpringCloudCircuitBreakerFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.StripPrefixGatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.TokenRelayGatewayFilterFactory;
-import org.springframework.cloud.gateway.filter.factory.cache.ResponseCacheGatewayFilterFactory;
+import org.springframework.cloud.gateway.filter.factory.cache.LocalResponseCacheGatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.rewrite.ModifyRequestBodyGatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.rewrite.ModifyResponseBodyGatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.rewrite.RewriteFunction;
@@ -233,8 +234,24 @@ public class GatewayFilterSpec extends UriSpec {
 	 * @return a {@link GatewayFilterSpec} that can be used to apply additional filters
 	 */
 	public GatewayFilterSpec localResponseCache(Duration timeToLive, DataSize size) {
-		return filter(
-				getBean(ResponseCacheGatewayFilterFactory.class).apply(c -> c.setTimeToLive(timeToLive).setSize(size)));
+		return filter(getBean(LocalResponseCacheGatewayFilterFactory.class)
+				.apply(c -> c.setTimeToLive(timeToLive).setSize(size)));
+	}
+
+	// TODO update javadoc
+	/**
+	 * A filter that adds a redis cache for storing response body for repeated requests.
+	 * <p>
+	 * If `timeToLive` is null, a global cache is used configured by the global
+	 * configuration
+	 * {@link org.springframework.cloud.gateway.filter.factory.cache.LocalResponseCacheProperties}.
+	 * @param timeToLive time an entry is kept in cache. Default: 5 minutes
+	 * @param size size expression to limit cache size (See format in {@link DataSize}.
+	 * Default: {@code null} (no limit)
+	 * @return a {@link GatewayFilterSpec} that can be used to apply additional filters
+	 */
+	public GatewayFilterSpec redisResponseCache(Duration timeToLive) {
+		return filter(getBean(RedisResponseCacheGatewayFilterFactory.class).apply(c -> c.setTimeToLive(timeToLive)));
 	}
 
 	/**

@@ -19,7 +19,6 @@ package org.springframework.cloud.gateway.filter.factory.cache;
 import java.time.Duration;
 import java.util.List;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.Cache;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
@@ -29,18 +28,9 @@ import org.springframework.util.unit.DataSize;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * {@link org.springframework.cloud.gateway.filter.factory.GatewayFilterFactory} of
- * {@link ResponseCacheGatewayFilter}.
- *
- * By default, a global cache (defined as properties in the application) is used. For
- * specific route configuration, parameters can be added following
- * {@link RouteCacheConfiguration} class.
- *
- * @author Marta Medio
- * @author Ignacio Lozano
+ * Base class for multiple implementations of response caching.
  */
-@ConditionalOnProperty(value = "spring.cloud.gateway.filter.local-response-cache.enabled", havingValue = "true")
-public class ResponseCacheGatewayFilterFactory
+public abstract class ResponseCacheGatewayFilterFactory
 		extends AbstractGatewayFilterFactory<ResponseCacheGatewayFilterFactory.RouteCacheConfiguration> {
 
 	/**
@@ -49,13 +39,17 @@ public class ResponseCacheGatewayFilterFactory
 	 */
 	public static final String LOCAL_RESPONSE_CACHE_FILTER_APPLIED = "LocalResponseCacheGatewayFilter-Applied";
 
-	private ResponseCacheManagerFactory cacheManagerFactory;
+	protected ResponseCacheManagerFactory cacheManagerFactory;
 
-	private Duration defaultTimeToLive;
+	protected Duration defaultTimeToLive;
 
-	private DataSize defaultSize;
+	protected DataSize defaultSize;
 
-	private CacheManagerProvider cacheManagerProvider;
+	protected CacheManagerProvider cacheManagerProvider;
+
+	protected ResponseCacheGatewayFilterFactory(Class configClass) {
+		super(configClass);
+	}
 
 	public ResponseCacheGatewayFilterFactory(ResponseCacheManagerFactory cacheManagerFactory,
 			Duration defaultTimeToLive, CacheManagerProvider cacheManagerProvider) {
