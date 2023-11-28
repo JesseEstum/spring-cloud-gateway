@@ -21,7 +21,7 @@ import java.time.Duration;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 
 /**
- * Base class for multiple implementations of response caching.
+ * Base class for of response caching implementations.
  */
 public abstract class ResponseCacheGatewayFilterFactory<C> extends AbstractGatewayFilterFactory<C> {
 

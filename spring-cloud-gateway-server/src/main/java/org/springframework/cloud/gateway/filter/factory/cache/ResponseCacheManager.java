@@ -82,6 +82,14 @@ public class ResponseCacheManager {
 		return getFromCache(key);
 	}
 
+	/**
+	 * This method operates on a {@link ServerWebExchange} to facilitate overrides/functionality extensions that may
+	 * need to use more data than just a {@link ServerHttpRequest} provides.
+	 *
+	 * @param exchange
+	 * @param metadataKey
+	 * @return
+	 */
 	public Optional<CachedResponse> getFromCache(ServerWebExchange exchange, String metadataKey) {
 		return getFromCache(exchange.getRequest(), metadataKey);
 	}

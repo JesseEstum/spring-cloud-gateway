@@ -44,6 +44,7 @@ public class ResponseCacheGatewayFilter implements GatewayFilter, Ordered {
 
 	private final String filterAppliedAttribute;
 
+	//TODO delete this constructor at next major release
 	public ResponseCacheGatewayFilter(ResponseCacheManager responseCacheManager) {
 		this(responseCacheManager, null);
 	}
@@ -88,6 +89,7 @@ public class ResponseCacheGatewayFilter implements GatewayFilter, Ordered {
 		}
 		else {
 			// for backwards compatibility
+			//TODO delete this backwards compatible stuff in a future major release in favor of always explicitly setting filterAppliedAttribute at construction
 			return LocalResponseCacheGatewayFilterFactory.LOCAL_RESPONSE_CACHE_FILTER_APPLIED;
 		}
 	}
