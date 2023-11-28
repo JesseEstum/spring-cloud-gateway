@@ -17,10 +17,16 @@
 package org.springframework.cloud.gateway.filter.factory.cache;
 
 import java.time.Duration;
+import java.util.List;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.cloud.gateway.filter.factory.cache.provider.CacheManagerProvider;
+import org.springframework.cache.Cache;
+import org.springframework.cloud.gateway.config.LocalResponseCacheAutoConfiguration;
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.factory.GatewayFilterFactory;
+import org.springframework.cloud.gateway.support.HasRouteId;
 import org.springframework.util.unit.DataSize;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * {@link org.springframework.cloud.gateway.filter.factory.GatewayFilterFactory} of
@@ -34,7 +40,9 @@ import org.springframework.util.unit.DataSize;
  * @author Ignacio Lozano
  */
 @ConditionalOnProperty(value = "spring.cloud.gateway.filter.local-response-cache.enabled", havingValue = "true")
-public class LocalResponseCacheGatewayFilterFactory extends ResponseCacheGatewayFilterFactory {
+public class LocalResponseCacheGatewayFilterFactory
+		extends ResponseCacheGatewayFilterFactory<LocalResponseCacheGatewayFilterFactory.RouteCacheConfiguration>
+		implements GatewayFilterFactory<LocalResponseCacheGatewayFilterFactory.RouteCacheConfiguration> {
 
 	// TODO backwards compatible constructor
 	public LocalResponseCacheGatewayFilterFactory(ResponseCacheManagerFactory cacheManagerFactory,
@@ -54,15 +62,72 @@ public class LocalResponseCacheGatewayFilterFactory extends ResponseCacheGateway
 		this.defaultSize = defaultSize;
 	}
 
-	// TODO delete???
-	public LocalResponseCacheGatewayFilterFactory(ResponseCacheManagerFactory cacheManagerFactory,
-			Duration defaultTimeToLive, DataSize defaultSize, CacheManagerProvider cacheManagerProvider) {
-		super(cacheManagerFactory, defaultTimeToLive, defaultSize, cacheManagerProvider);
+	@Override
+	public List<String> shortcutFieldOrder() {
+		return List.of("timeToLive", "size");
+	}
+
+	@Override
+	public GatewayFilter apply(RouteCacheConfiguration config) {
+		LocalResponseCacheProperties cacheProperties = mapRouteCacheConfig(config);
+
+		Cache routeCache = LocalResponseCacheAutoConfiguration.createGatewayCacheManager(cacheProperties)
+				.getCache(config.getRouteId() + "-cache");
+		return new ResponseCacheGatewayFilter(cacheManagerFactory.create(routeCache, cacheProperties.getTimeToLive()));
+	}
+
+	private LocalResponseCacheProperties mapRouteCacheConfig(RouteCacheConfiguration config) {
+		Duration timeToLive = config.getTimeToLive() != null ? config.getTimeToLive() : defaultTimeToLive;
+		DataSize size = config.getSize() != null ? config.getSize() : defaultSize;
+
+		LocalResponseCacheProperties responseCacheProperties = new LocalResponseCacheProperties();
+		responseCacheProperties.setTimeToLive(timeToLive);
+		responseCacheProperties.setSize(size);
+		return responseCacheProperties;
 	}
 
 	// @PostConstruct
 	// public void setCacheManagerProvider(CacheManagerProvider cacheManagerProvider) {
 	// this.cacheManagerProvider = cacheManagerProvider;
 	// }
+
+	@Validated
+	public static class RouteCacheConfiguration implements HasRouteId {
+
+		private DataSize size;
+
+		private Duration timeToLive;
+
+		private String routeId;
+
+		public DataSize getSize() {
+			return size;
+		}
+
+		public RouteCacheConfiguration setSize(DataSize size) {
+			this.size = size;
+			return this;
+		}
+
+		public Duration getTimeToLive() {
+			return timeToLive;
+		}
+
+		public RouteCacheConfiguration setTimeToLive(Duration timeToLive) {
+			this.timeToLive = timeToLive;
+			return this;
+		}
+
+		@Override
+		public void setRouteId(String routeId) {
+			this.routeId = routeId;
+		}
+
+		@Override
+		public String getRouteId() {
+			return this.routeId;
+		}
+
+	}
 
 }

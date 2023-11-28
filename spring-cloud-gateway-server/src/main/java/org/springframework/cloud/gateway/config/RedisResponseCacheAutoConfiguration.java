@@ -25,24 +25,20 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cloud.gateway.config.conditional.ConditionalOnEnabledFilter;
 import org.springframework.cloud.gateway.filter.factory.cache.GlobalRedisResponseCacheGatewayFilter;
-import org.springframework.cloud.gateway.filter.factory.cache.LocalResponseCacheProperties;
 import org.springframework.cloud.gateway.filter.factory.cache.RedisResponseCacheGatewayFilterFactory;
+import org.springframework.cloud.gateway.filter.factory.cache.RedisResponseCacheProperties;
 import org.springframework.cloud.gateway.filter.factory.cache.ResponseCacheManagerFactory;
 import org.springframework.cloud.gateway.filter.factory.cache.keygenerator.CacheKeyGenerator;
-import org.springframework.cloud.gateway.filter.factory.cache.provider.RedisCacheManagerProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCache;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties({ LocalResponseCacheProperties.class }) // TODO need to
-																		// refactor this
-																		// into local
-																		// response cache
-																		// properties vs
-																		// redis ones
+@EnableConfigurationProperties({ RedisResponseCacheProperties.class })
 @ConditionalOnClass({ RedisCache.class, RedisConnectionFactory.class })
 @ConditionalOnEnabledFilter(RedisResponseCacheGatewayFilterFactory.class)
 public class RedisResponseCacheAutoConfiguration {
@@ -52,23 +48,19 @@ public class RedisResponseCacheAutoConfiguration {
 	@Bean
 	@Conditional(OnGlobalRedisResponseCacheCondition.class)
 	public GlobalRedisResponseCacheGatewayFilter globalRedisResponseCacheGatewayFilter(
-			ResponseCacheManagerFactory responseCacheManagerFactory, LocalResponseCacheProperties properties,
-			RedisCacheManagerProvider redisCacheManagerProvider) {
+			ResponseCacheManagerFactory responseCacheManagerFactory, RedisResponseCacheProperties properties,
+			RedisConnectionFactory redisConnectionFactory) {
 		return new GlobalRedisResponseCacheGatewayFilter(responseCacheManagerFactory,
-				responseCache(redisCacheManagerProvider.getCacheManager(properties)), properties.getTimeToLive());
-	}
-
-	@Bean
-	public RedisCacheManagerProvider redisCacheManagerProvider(RedisConnectionFactory redisConnectionFactory) {
-		return new RedisCacheManagerProvider(redisConnectionFactory);
+				responseCache(createGatewayCacheManager(properties, redisConnectionFactory)),
+				properties.getTimeToLive());
 	}
 
 	@Bean
 	public RedisResponseCacheGatewayFilterFactory redisResponseCacheGatewayFilterFactory(
-			ResponseCacheManagerFactory responseCacheManagerFactory, LocalResponseCacheProperties properties,
-			RedisCacheManagerProvider redisCacheManagerProvider) {
+			ResponseCacheManagerFactory responseCacheManagerFactory, RedisResponseCacheProperties properties,
+			RedisConnectionFactory redisConnectionFactory) {
 		return new RedisResponseCacheGatewayFilterFactory(responseCacheManagerFactory, properties.getTimeToLive(),
-				properties.getSize(), redisCacheManagerProvider);
+				redisConnectionFactory);
 	}
 
 	@Bean
@@ -82,8 +74,15 @@ public class RedisResponseCacheAutoConfiguration {
 		return new CacheKeyGenerator();
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static RedisCacheManager createGatewayCacheManager(RedisResponseCacheProperties cacheProperties,
+			RedisConnectionFactory redisConnectionFactory) {
+		RedisCacheConfiguration redisCacheConfigurationWithTtl = RedisCacheConfiguration.defaultCacheConfig()
+				.entryTtl(cacheProperties.getTimeToLive());
 
+		return RedisCacheManager.builder(redisConnectionFactory).cacheDefaults(redisCacheConfigurationWithTtl).build();
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	Cache responseCache(CacheManager cacheManager) {
 		return cacheManager.getCache(RESPONSE_CACHE_NAME);
 	}

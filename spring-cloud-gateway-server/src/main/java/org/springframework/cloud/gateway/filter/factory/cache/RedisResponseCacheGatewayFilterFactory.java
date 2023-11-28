@@ -17,18 +17,83 @@
 package org.springframework.cloud.gateway.filter.factory.cache;
 
 import java.time.Duration;
+import java.util.List;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.cloud.gateway.filter.factory.cache.provider.CacheManagerProvider;
-import org.springframework.util.unit.DataSize;
+import org.springframework.cache.Cache;
+import org.springframework.cloud.gateway.config.RedisResponseCacheAutoConfiguration;
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.factory.GatewayFilterFactory;
+import org.springframework.cloud.gateway.support.HasRouteId;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.validation.annotation.Validated;
 
 @ConditionalOnProperty(value = "spring.cloud.gateway.filter.redis-response-cache.enabled", havingValue = "true")
-public class RedisResponseCacheGatewayFilterFactory extends ResponseCacheGatewayFilterFactory {
+public class RedisResponseCacheGatewayFilterFactory
+		extends ResponseCacheGatewayFilterFactory<RedisResponseCacheGatewayFilterFactory.RouteCacheConfiguration>
+		implements GatewayFilterFactory<RedisResponseCacheGatewayFilterFactory.RouteCacheConfiguration> {
+
+	private RedisConnectionFactory redisConnectionFactory;
 
 	// TODO shitcan defaultSize
 	public RedisResponseCacheGatewayFilterFactory(ResponseCacheManagerFactory cacheManagerFactory,
-			Duration defaultTimeToLive, DataSize defaultSize, CacheManagerProvider cacheManagerProvider) {
-		super(cacheManagerFactory, defaultTimeToLive, defaultSize, cacheManagerProvider);
+			Duration defaultTimeToLive, RedisConnectionFactory redisConnectionFactory) {
+		super(RouteCacheConfiguration.class);
+		this.cacheManagerFactory = cacheManagerFactory;
+		this.defaultTimeToLive = defaultTimeToLive;
+		this.redisConnectionFactory = redisConnectionFactory;
+	}
+
+	@Override
+	public List<String> shortcutFieldOrder() {
+		return List.of("timeToLive");
+	}
+
+	@Override
+	public GatewayFilter apply(RouteCacheConfiguration config) {
+		RedisResponseCacheProperties cacheProperties = mapRouteCacheConfig(config);
+
+		Cache routeCache = RedisResponseCacheAutoConfiguration
+				.createGatewayCacheManager(cacheProperties, redisConnectionFactory)
+				.getCache(config.getRouteId() + "-cache");
+		return new ResponseCacheGatewayFilter(cacheManagerFactory.create(routeCache, cacheProperties.getTimeToLive()));
+	}
+
+	private RedisResponseCacheProperties mapRouteCacheConfig(RouteCacheConfiguration config) {
+		Duration timeToLive = config.getTimeToLive() != null ? config.getTimeToLive() : defaultTimeToLive;
+
+		RedisResponseCacheProperties responseCacheProperties = new RedisResponseCacheProperties();
+		responseCacheProperties.setTimeToLive(timeToLive);
+
+		return responseCacheProperties;
+	}
+
+	@Validated
+	public static class RouteCacheConfiguration implements HasRouteId {
+
+		private Duration timeToLive;
+
+		private String routeId;
+
+		public Duration getTimeToLive() {
+			return timeToLive;
+		}
+
+		public RouteCacheConfiguration setTimeToLive(Duration timeToLive) {
+			this.timeToLive = timeToLive;
+			return this;
+		}
+
+		@Override
+		public void setRouteId(String routeId) {
+			this.routeId = routeId;
+		}
+
+		@Override
+		public String getRouteId() {
+			return this.routeId;
+		}
+
 	}
 
 }
