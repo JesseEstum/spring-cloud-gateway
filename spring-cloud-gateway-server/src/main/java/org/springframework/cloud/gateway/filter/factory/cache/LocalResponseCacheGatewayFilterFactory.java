@@ -44,16 +44,19 @@ public class LocalResponseCacheGatewayFilterFactory
 		extends ResponseCacheGatewayFilterFactory<LocalResponseCacheGatewayFilterFactory.RouteCacheConfiguration>
 		implements GatewayFilterFactory<LocalResponseCacheGatewayFilterFactory.RouteCacheConfiguration> {
 
-	// TODO backwards compatible constructor
+	/**
+	 * Exchange attribute name to track if the request has been already process by cache
+	 * at route filter level.
+	 */
+	public static final String LOCAL_RESPONSE_CACHE_FILTER_APPLIED = "LocalResponseCacheGatewayFilter-Applied";
+
+	private DataSize defaultSize;
+
 	public LocalResponseCacheGatewayFilterFactory(ResponseCacheManagerFactory cacheManagerFactory,
 			Duration defaultTimeToLive) {
-		super(RouteCacheConfiguration.class);
-		this.cacheManagerFactory = cacheManagerFactory;
-		this.defaultTimeToLive = defaultTimeToLive;
-		this.defaultSize = null;
+		this(cacheManagerFactory, defaultTimeToLive, null);
 	}
 
-	// TODO backwards compatible constructor
 	public LocalResponseCacheGatewayFilterFactory(ResponseCacheManagerFactory cacheManagerFactory,
 			Duration defaultTimeToLive, DataSize defaultSize) {
 		super(RouteCacheConfiguration.class);
@@ -63,17 +66,13 @@ public class LocalResponseCacheGatewayFilterFactory
 	}
 
 	@Override
-	public List<String> shortcutFieldOrder() {
-		return List.of("timeToLive", "size");
-	}
-
-	@Override
 	public GatewayFilter apply(RouteCacheConfiguration config) {
 		LocalResponseCacheProperties cacheProperties = mapRouteCacheConfig(config);
 
 		Cache routeCache = LocalResponseCacheAutoConfiguration.createGatewayCacheManager(cacheProperties)
 				.getCache(config.getRouteId() + "-cache");
-		return new ResponseCacheGatewayFilter(cacheManagerFactory.create(routeCache, cacheProperties.getTimeToLive()));
+		return new ResponseCacheGatewayFilter(cacheManagerFactory.create(routeCache, cacheProperties.getTimeToLive()),
+				LOCAL_RESPONSE_CACHE_FILTER_APPLIED);
 	}
 
 	private LocalResponseCacheProperties mapRouteCacheConfig(RouteCacheConfiguration config) {
@@ -86,10 +85,10 @@ public class LocalResponseCacheGatewayFilterFactory
 		return responseCacheProperties;
 	}
 
-	// @PostConstruct
-	// public void setCacheManagerProvider(CacheManagerProvider cacheManagerProvider) {
-	// this.cacheManagerProvider = cacheManagerProvider;
-	// }
+	@Override
+	public List<String> shortcutFieldOrder() {
+		return List.of("timeToLive", "size");
+	}
 
 	@Validated
 	public static class RouteCacheConfiguration implements HasRouteId {

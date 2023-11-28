@@ -33,9 +33,14 @@ public class RedisResponseCacheGatewayFilterFactory
 		extends ResponseCacheGatewayFilterFactory<RedisResponseCacheGatewayFilterFactory.RouteCacheConfiguration>
 		implements GatewayFilterFactory<RedisResponseCacheGatewayFilterFactory.RouteCacheConfiguration> {
 
+	/**
+	 * Exchange attribute name to track if the request has been already process by cache
+	 * at route filter level.
+	 */
+	public static final String REDIS_RESPONSE_CACHE_FILTER_APPLIED = "RedisResponseCacheGatewayFilter-Applied";
+
 	private RedisConnectionFactory redisConnectionFactory;
 
-	// TODO shitcan defaultSize
 	public RedisResponseCacheGatewayFilterFactory(ResponseCacheManagerFactory cacheManagerFactory,
 			Duration defaultTimeToLive, RedisConnectionFactory redisConnectionFactory) {
 		super(RouteCacheConfiguration.class);
@@ -56,7 +61,8 @@ public class RedisResponseCacheGatewayFilterFactory
 		Cache routeCache = RedisResponseCacheAutoConfiguration
 				.createGatewayCacheManager(cacheProperties, redisConnectionFactory)
 				.getCache(config.getRouteId() + "-cache");
-		return new ResponseCacheGatewayFilter(cacheManagerFactory.create(routeCache, cacheProperties.getTimeToLive()));
+		return new ResponseCacheGatewayFilter(cacheManagerFactory.create(routeCache, cacheProperties.getTimeToLive()),
+				REDIS_RESPONSE_CACHE_FILTER_APPLIED);
 	}
 
 	private RedisResponseCacheProperties mapRouteCacheConfig(RouteCacheConfiguration config) {

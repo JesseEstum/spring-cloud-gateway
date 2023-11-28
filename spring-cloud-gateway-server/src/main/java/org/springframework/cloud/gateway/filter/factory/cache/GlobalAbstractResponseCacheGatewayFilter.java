@@ -27,8 +27,6 @@ import org.springframework.cloud.gateway.filter.NettyWriteResponseFilter;
 import org.springframework.core.Ordered;
 import org.springframework.web.server.ServerWebExchange;
 
-import static org.springframework.cloud.gateway.filter.factory.cache.ResponseCacheGatewayFilterFactory.LOCAL_RESPONSE_CACHE_FILTER_APPLIED;
-
 /**
  * Base class providing global response caching.
  */
@@ -37,14 +35,14 @@ public abstract class GlobalAbstractResponseCacheGatewayFilter implements Global
 	protected final ResponseCacheGatewayFilter responseCacheGatewayFilter;
 
 	protected GlobalAbstractResponseCacheGatewayFilter(ResponseCacheManagerFactory cacheManagerFactory,
-			Cache globalCache, Duration configuredTimeToLive) {
+			Cache globalCache, Duration configuredTimeToLive, String filterAppliedAttribute) {
 		responseCacheGatewayFilter = new ResponseCacheGatewayFilter(
-				cacheManagerFactory.create(globalCache, configuredTimeToLive));
+				cacheManagerFactory.create(globalCache, configuredTimeToLive), filterAppliedAttribute);
 	}
 
 	@Override
 	public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-		if (exchange.getAttributes().get(LOCAL_RESPONSE_CACHE_FILTER_APPLIED) == null) {
+		if (exchange.getAttributes().get(getFilterAppliedAttribute()) == null) {
 			return responseCacheGatewayFilter.filter(exchange, chain);
 		}
 		return chain.filter(exchange);
@@ -54,5 +52,11 @@ public abstract class GlobalAbstractResponseCacheGatewayFilter implements Global
 	public int getOrder() {
 		return NettyWriteResponseFilter.WRITE_RESPONSE_FILTER_ORDER - 2;
 	}
+
+	/**
+	 * @return an exchange attribute name we can use to detect if this type of caching
+	 * filter has already been applied
+	 */
+	abstract public String getFilterAppliedAttribute();
 
 }

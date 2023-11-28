@@ -31,7 +31,13 @@ public class GlobalRedisResponseCacheGatewayFilter extends GlobalAbstractRespons
 
 	public GlobalRedisResponseCacheGatewayFilter(ResponseCacheManagerFactory cacheManagerFactory, Cache globalCache,
 			Duration configuredTimeToLive) {
-		super(cacheManagerFactory, globalCache, configuredTimeToLive);
+		super(cacheManagerFactory, globalCache, configuredTimeToLive,
+				RedisResponseCacheGatewayFilterFactory.REDIS_RESPONSE_CACHE_FILTER_APPLIED);
+	}
+
+	@Override
+	public String getFilterAppliedAttribute() {
+		return RedisResponseCacheGatewayFilterFactory.REDIS_RESPONSE_CACHE_FILTER_APPLIED;
 	}
 
 }

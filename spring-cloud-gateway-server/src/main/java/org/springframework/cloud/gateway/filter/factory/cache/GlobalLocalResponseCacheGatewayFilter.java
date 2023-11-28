@@ -22,7 +22,7 @@ import org.springframework.cache.Cache;
 
 /**
  * Caches responses for routes that don't have the
- * {@link ResponseCacheGatewayFilterFactory} configured.
+ * {@link LocalResponseCacheGatewayFilterFactory} configured.
  *
  * @author Ignacio Lozano
  * @author Marta Medio
@@ -31,7 +31,13 @@ public class GlobalLocalResponseCacheGatewayFilter extends GlobalAbstractRespons
 
 	public GlobalLocalResponseCacheGatewayFilter(ResponseCacheManagerFactory cacheManagerFactory, Cache globalCache,
 			Duration configuredTimeToLive) {
-		super(cacheManagerFactory, globalCache, configuredTimeToLive);
+		super(cacheManagerFactory, globalCache, configuredTimeToLive,
+				LocalResponseCacheGatewayFilterFactory.LOCAL_RESPONSE_CACHE_FILTER_APPLIED);
+	}
+
+	@Override
+	public String getFilterAppliedAttribute() {
+		return LocalResponseCacheGatewayFilterFactory.LOCAL_RESPONSE_CACHE_FILTER_APPLIED;
 	}
 
 }
